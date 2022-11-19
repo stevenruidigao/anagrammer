@@ -14,13 +14,11 @@ import (
 
 func main() {
 	dictionaryFile := flag.String("dictionary", "dictionary.json", "The dictionary file to use")
-	word := flag.String("string", "anagram", "The string to find anagrams for")
-	num := flag.Int("maxnum", 1, "The maximum number of words to use")
+	str := flag.String("string", "anagram", "The string to find anagrams for")
+	maxWords := flag.Int("maxwords", -1, "The maximum number of words to use")
 	flag.Parse()
 
-	fmt.Println("Finding anagrams for", "'"+*word+"'", "with", *num, "words using", *dictionaryFile)
-
-	// Read the file
+	// Read the dictionary file
 	dictionary, err := ioutil.ReadFile(*dictionaryFile)
 
 	if err != nil {
@@ -35,20 +33,14 @@ func main() {
 		panic(err)
 	}
 
-	// Print the result
+	// Add enabled words to the word list
 	words := []string{}
 
 	for key, value := range data {
-		// if key == "a" || key == "u" || key == "i" {
-		// 	fmt.Println(key, value)
-		// }
-
 		if value == 1 {
 			words = append(words, key)
 		}
 	}
-
-	// words := maps.Keys(data)
 
 	sort.Slice(words, func(i, j int) bool {
 		if len(words[i]) == len(words[j]) {
@@ -58,151 +50,30 @@ func main() {
 		return len(words[i]) < len(words[j])
 	})
 
-	anagrams := GenerateAnagrams(words, map[int]map[string]struct{}{}, *word, -1, *num)
+	// Find anagrams
+	fmt.Println("Finding anagrams for", "'"+*str+"'", "with", *maxWords, "words using", *dictionaryFile)
+	anagrams := Anagrammer(words, *str, *maxWords)
 
 	for _, anagram := range anagrams {
 		fmt.Println(anagram)
 	}
-	// fmt.Println(words, Anagramer(words, "amanap"))
 }
 
-func CompareStrings(str1 string, str2 string) bool {
+func Anagrammer(words []string, str string, maxWords int) []string {
+	return GenerateAnagrams(words, map[int]map[string]struct{}{}, str, -1, maxWords)
+}
+
+// String comparison function accounting for
+// length first and lexigraphical order second
+func CompareStrings(str1 string, str2 string) int {
 	if len(str1) == len(str2) {
-		return str1 < str2
+		return strings.Compare(str1, str2)
 	}
 
-	return len(str1) < len(str2)
+	return len(str1) - len(str2)
 }
 
-// func Anagrammer(words []string, str string) []string {
-// 	str = strings.Replace(str, " ", "", -1)
-
-// 	sort.Slice(words, func(i, j int) bool {
-// 		if len(words[i]) == len(words[j]) {
-// 			return words[i] < words[j]
-// 		}
-
-// 		return len(words[i]) < len(words[j])
-// 	})
-
-// 	return GetAnagrams(words, map[int][]string{}, str, "", len(str))
-// }
-
-// func GetAnagrams(words []string, work map[int][]string, str string, current string, length int) []string {
-// 	anagrams := []string{}
-
-// 	for i := 0; i < len(str); i++ {
-// 		startString := ""
-
-// 		for j := 0; j < i; j++ {
-// 			startString += "a"
-// 		}
-
-// 		start, _ := slices.BinarySearchFunc(words, startString, func(str1 string, str2 string) int {
-// 			if len(str1) == len(str2) {
-// 				return strings.Compare(str1, str2)
-// 			}
-
-// 			return len(str1) - len(str2)
-// 		})
-
-// 		for j := start; len(words[j]) == i; j++ {
-// 			anagrams = append(anagrams, GetAnagrams(words)...)
-// 		}
-// 	}
-
-// 	return work[len(str)]
-// }
-
-func GenerateAnagrams(words []string, work map[int]map[string]struct{}, str string, length int, num int) []string {
-	str = strings.ToLower(strings.Replace(str, " ", "", -1))
-	// fmt.Println("str:", str)
-
-	if num == 0 {
-		return []string{}
-	}
-
-	if length == -1 {
-		length = len(str)
-	}
-
-	_, ok := work[length]
-
-	if ok {
-		// fmt.Println("hit", length)
-
-		return maps.Keys(work[length])
-	}
-
-	anagrams := []string{}
-
-	for i := length - 1; i >= 0; i-- {
-		// fmt.Println(i)
-		left := GenerateAnagrams(words, work, str, i, num-1)
-
-		startString := ""
-
-		for j := 0; j < length-i; j++ {
-			startString += "A"
-		}
-
-		start, _ := slices.BinarySearchFunc(words, startString, func(str1 string, str2 string) int {
-			if len(str1) == len(str2) {
-				return strings.Compare(str1, str2)
-			}
-
-			return len(str1) - len(str2)
-		})
-
-		endString := ""
-
-		for j := 0; j < length-i; j++ {
-			endString += "z"
-		}
-
-		end, _ := slices.BinarySearchFunc(words, endString, func(str1 string, str2 string) int {
-			if len(str1) == len(str2) {
-				return strings.Compare(str1, str2)
-			}
-
-			return len(str1) - len(str2)
-		})
-
-		right := words[start:end]
-
-		// fmt.Println(start, startString, right, endString, end)
-		// fmt.Println(i, len(left), len(right), words[0:26])
-		// fmt.Println(startString, endString)
-		for j := 0; j < len(left); j++ {
-			for k := 0; k < len(right); k++ {
-				// fmt.Println("^", i, left[j]+right[k])
-				if IsInString(str, left[j]+right[k]) {
-					// fmt.Println(right)
-					anagrams = append(anagrams, left[j]+" "+right[k])
-				}
-			}
-		}
-
-		if i == 0 {
-			for j := 0; j < len(right); j++ {
-				// fmt.Println("^", i, right[j])
-				if IsInString(str, right[j]) {
-					// fmt.Println(right)
-					anagrams = append(anagrams, right[j])
-				}
-			}
-		}
-	}
-
-	work[length] = make(map[string]struct{})
-
-	for _, word := range anagrams {
-		work[length][word] = struct{}{}
-	}
-
-	return maps.Keys(work[length])
-}
-
+// Check if str2 could be built from characters in str1
 func IsInString(str1 string, str2 string) bool {
 	str1 = strings.Replace(str1, " ", "", -1)
 	str2 = strings.Replace(str2, " ", "", -1)
@@ -218,8 +89,10 @@ func IsInString(str1 string, str2 string) bool {
 
 	for _, char := range str2 {
 		chars[char]--
+	}
 
-		if chars[char] < 0 {
+	for _, count := range chars {
+		if count < 0 {
 			return false
 		}
 	}
@@ -227,29 +100,84 @@ func IsInString(str1 string, str2 string) bool {
 	return true
 }
 
-func IsAnagram(str1 string, str2 string) bool {
-	str1 = strings.Replace(str1, " ", "", -1)
-	str2 = strings.Replace(str2, " ", "", -1)
+// Generates a slice of strings containing all possible
+// "subanagrams" of str of length length and number of words
+// at most maxWords.
+// work is used to store previous results from smaller
+// subproblems.
+func GenerateAnagrams(words []string, work map[int]map[string]struct{}, str string, length int, maxWords int) []string {
+	str = strings.ToLower(strings.Replace(str, " ", "", -1))
 
-	if len(str1) != len(str2) {
-		return false
+	// Base case: cannot use any words
+	if maxWords == 0 {
+		return []string{}
 	}
 
-	chars := map[rune]int{}
-
-	for _, char := range str1 {
-		chars[char]++
+	// Auto-detect length if not specified
+	if length == -1 {
+		length = len(str)
 	}
 
-	for _, char := range str2 {
-		chars[char]--
+	// Check if we've already computed this
+	// subproblem, and return it if we have
+	_, ok := work[length]
+
+	if ok {
+		return maps.Keys(work[length])
 	}
 
-	for _, count := range chars {
-		if count != 0 {
-			return false
+	// For different lengths, generate an anagram of that length
+	// from the set of characters in str and add a word of appropriate
+	// length from the dictionary to it.
+	anagrams := []string{}
+
+	for i := length - 1; i >= 0; i-- {
+		left := GenerateAnagrams(words, work, str, i, maxWords-1)
+
+		// Find the words with the same length as the remaining length
+		startString := ""
+
+		for j := 0; j < length-i; j++ {
+			startString += " "
+		}
+
+		start, _ := slices.BinarySearchFunc(words, startString, CompareStrings)
+
+		endString := ""
+
+		for j := 0; j < length-i; j++ {
+			endString += "~"
+		}
+
+		end, _ := slices.BinarySearchFunc(words, endString, CompareStrings)
+
+		right := words[start:end]
+
+		// Check if any of the potential anagrams work,
+		// and add them if they do.
+		for j := 0; j < len(left); j++ {
+			for k := 0; k < len(right); k++ {
+				if IsInString(str, left[j]+right[k]) {
+					anagrams = append(anagrams, left[j]+" "+right[k])
+				}
+			}
+		}
+
+		if i == 0 {
+			for j := 0; j < len(right); j++ {
+				if IsInString(str, right[j]) {
+					anagrams = append(anagrams, right[j])
+				}
+			}
 		}
 	}
 
-	return true
+	// Add our anagrams to the work map
+	work[length] = make(map[string]struct{})
+
+	for _, word := range anagrams {
+		work[length][word] = struct{}{}
+	}
+
+	return maps.Keys(work[length])
 }
